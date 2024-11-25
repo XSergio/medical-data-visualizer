@@ -4,56 +4,71 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # 1
-df = None
+df = pd.read_csv('medical_examination.csv')
 
 # 2
-df['overweight'] = None
+df['overweight'] = df.apply(lambda row: 1 if row['weight'] / ((row['height'] / 100 ) ** 2) > 25 else 0, axis=1)
 
 # 3
+# Normalize data by making 0 always good and 1 always bad. 
+# If the value of cholesterol or gluc is 1, set the value to 0. 
+# If the value is more than 1, set the value to 1.
+df['cholesterol'] = df.apply(lambda row: 1 if row['cholesterol'] > 1 else 0, axis=1)
+df['gluc'] = df.apply(lambda row: 1 if row['gluc'] > 1 else 0, axis=1)
 
-
-# 4
 def draw_cat_plot():
-    # 5
-    df_cat = None
+    # 5 Create a DataFrame for the cat plot using pd.melt with values 
+    # from cholesterol, gluc, smoke, alco, active, and overweight in the df_cat variable.
+    df_cat = pd.melt(df, 
+                     id_vars=['id', 'cardio'], 
+                     value_vars=['cholesterol', 'gluc', 'smoke', 'alco', 'active', 'overweight'],
+                     var_name='variable',
+                     value_name='value')
 
+    # 6 Group and reformat the data in df_cat to split it by cardio. 
+    # Show the counts of each feature. 
+    # You will have to rename one of the columns for the catplot to work correctly.
+    df_cat = df_cat.groupby(['variable','cardio','value'])['variable'].count().reset_index(name='total')   
 
-    # 6
-    df_cat = None
+    # 7 Convert the data into long format and create a chart that shows 
+    # the value counts of the categorical features using the following 
+    # method provided by the seaborn library import: sns.catplot().
     
-
-    # 7
-
-
-
-    # 8
-    fig = None
-
+    # 8 Get the figure for the output and store it in the fig variable.
+    fig = sns.catplot(data=df_cat, x='variable', y='total', hue='value', kind='bar', errorbar=None, col='cardio').fig
 
     # 9
     fig.savefig('catplot.png')
     return fig
 
 
-# 10
+# 10 Draw the Heat Map in the draw_heat_map function.
 def draw_heat_map():
-    # 11
-    df_heat = None
+    # 11 Clean the data in the df_heat variable by filtering out the following patient segments that represent incorrect data:
+    # diastolic pressure is higher than systolic (Keep the correct data with (df['ap_lo'] <= df['ap_hi']))
+    # # height is less than the 2.5th percentile (Keep the correct data with (df['height'] >= df['height'].quantile(0.025)))
+    # # height is more than the 97.5th percentile
+    # # weight is less than the 2.5th percentile
+    # # weight is more than the 97.5th percentile
+    df_heat = df[
+        (df['ap_lo'] <= df['ap_hi']) &
+        (df['height'] >= df['height'].quantile(0.025)) &
+        (df['height'] <= df['height'].quantile(0.975)) &
+        (df['weight'] >= df['weight'].quantile(0.025)) &
+        (df['weight'] <= df['weight'].quantile(0.975)) 
+    ]
+    # 12 Calculate the correlation matrix and store it in the corr variable.
+    corr = df_heat.corr()
 
-    # 12
-    corr = None
+    # 13 Generate a mask for the upper triangle and store it in the mask variable.
+    mask = np.triu(corr)
 
-    # 13
-    mask = None
+    # 14 Set up the matplotlib figure
+    # fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(12, 12))
 
-
-
-    # 14
-    fig, ax = None
-
-    # 15
-
-
+    # 15 Plot the correlation matrix using the method provided by the seaborn library import: sns.heatmap().
+    sns.heatmap(corr, center=0.8, annot=True, linewidths=1, square=True, cbar_kws = {"shrink": 0.5}, fmt='0.1f', mask=mask)
 
     # 16
     fig.savefig('heatmap.png')
